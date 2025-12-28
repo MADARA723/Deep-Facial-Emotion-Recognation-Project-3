@@ -5,8 +5,11 @@ import cv2
 from PIL import Image, ImageOps
 import os
 
-# 1. EXACT Labels from your Notebook (Lowercase & Alphabetical)
+# 1. Exact Labels from your Notebook
 CLASS_NAMES = ['angry', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
+
+# Load Face Detector (Built into OpenCV)
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 @st.cache_resource
 def load_emotion_model():
@@ -17,56 +20,48 @@ def load_emotion_model():
 
 model = load_emotion_model()
 
-st.set_page_config(page_title="DeepFER Emotion AI", page_icon="🎭")
-st.title("🎭 Deep Facial Emotion Recognition")
+st.title("🎭 Live Emotion AI (High Accuracy)")
 
-# User Input
-option = st.radio("Choose Input Method:", ("Live Camera", "Upload Photo"))
-if option == "Live Camera":
-    source = st.camera_input("Take a snapshot")
-else:
-    source = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
+source = st.camera_input("Look at the camera and take a snapshot")
 
 if source and model:
-    # --- PREPROCESSING (The "91% Recipe") ---
-    # Step 1: Grayscale (Notebook requirement)
-    img = Image.open(source).convert('L')
-    
-    # Step 2: Auto-contrast (Helps the model see features in low light)
-    img = ImageOps.autocontrast(img)
-    
-    # Step 3: Resize to 48x48
-    img_48 = img.resize((48, 48))
-    
-    # Step 4: Normalize and Reshape (1, 48, 48, 1)
-    img_array = np.array(img_48) / 255.0
-    img_reshaped = img_array.reshape(1, 48, 48, 1)
+    # --- STEP 1: Convert to OpenCV format ---
+    file_bytes = np.asarray(bytearray(source.read()), dtype=np.uint8)
+    frame = cv2.imdecode(file_bytes, 1)
+    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # --- INFERENCE ---
-    with st.spinner("Analyzing..."):
-        predictions = model.predict(img_reshaped)
-        max_idx = np.argmax(predictions[0])
-        final_emotion = CLASS_NAMES[max_idx]
-        confidence = np.max(predictions[0]) * 100
+    # --- STEP 2: Detect the Face ---
+    # This removes the background and shoulders
+    faces = face_cascade.detectMultiScale(gray_frame, 1.3, 5)
 
-    # --- RESULTS ---
-    st.divider()
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        # Show what the model actually sees (48x48 Grayscale)
-        st.image(img_48, caption="Model's View", width=120)
-        
-    with col2:
-        # Display the prediction in Bold/Capitalized for UI but using correct index
-        st.subheader(f"Result: {final_emotion.capitalize()}")
-        st.metric("Confidence", f"{confidence:.2f}%")
-        
-        # UI Feedback based on confidence
-        if confidence < 50:
-            st.warning("Low confidence. Make sure your face is centered and well-lit.")
-        else:
-            st.success("High confidence prediction!")
+    if len(faces) > 0:
+        for (x, y, w, h) in faces:
+            # Crop to the face only
+            roi_gray = gray_frame[y:y+h, x:x+w]
+            # Resize to 48x48
+            roi_resized = cv2.resize(roi_gray, (48, 48))
+            # Normalize
+            roi_normalized = roi_resized / 255.0
+            # Reshape for model
+            final_input = np.reshape(roi_normalized, (1, 48, 48, 1))
 
-st.markdown("---")
-st.caption("Training Accuracy: 91.21% | Dataset: FER2013 | Framework: TensorFlow/Keras")
+            # --- STEP 3: Prediction ---
+            predictions = model.predict(final_input)
+            max_idx = np.argmax(predictions[0])
+            label = CLASS_NAMES[max_idx]
+            conf = np.max(predictions[0]) * 100
+
+            # --- STEP 4: UI Results ---
+            st.divider()
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                # Show exactly what the model "sees"
+                st.image(roi_resized, caption="Cropped Face", width=120)
+            with col2:
+                st.header(f"Detected: {label.capitalize()}")
+                st.progress(int(conf))
+                st.write(f"Confidence: {conf:.2f}%")
+    else:
+        st.warning("No face detected! Please move closer or check your lighting.")
+
+st.info("Tip: The model works best when your face is centered and you aren't wearing glasses.")
