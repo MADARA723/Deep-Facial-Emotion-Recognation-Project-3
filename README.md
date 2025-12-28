@@ -65,17 +65,4 @@ Run App:
 Bash
 
 streamlit run app.py
-📄 License
-This project is open-source. Feel free to use the code for educational and research purposes.
 
-
----
-
-### **How to add this to GitHub:**
-1.  On your GitHub repository page, click **"Add file"** > **"Create new file"**.
-2.  Name the file exactly **`README.md`**.
-3.  Paste the code above into the editor.
-4.  **Important:** Replace `[Insert Your Streamlit Link Here]` with your actual live URL.
-5.  Click **"Commit changes"**.
-
-**I'm ready when you are! Which project should we write the LinkedIn post for first?**
