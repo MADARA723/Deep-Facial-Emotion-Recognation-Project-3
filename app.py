@@ -22,7 +22,7 @@ st.set_page_config(
 @st.cache_resource
 def load_emotion_model():
     # Make sure this filename matches exactly what is in your GitHub Repo
-    model_path = 'emotiondetector.h5' 
+    model_path = 'emotiondetector2.h5' 
     
     if not os.path.exists(model_path):
         st.error(f"🚨 Model file '{model_path}' not found!")
