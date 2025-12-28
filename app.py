@@ -13,7 +13,7 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 
 @st.cache_resource
 def load_emotion_model():
-    model_path = 'emotiondetector.h5'
+    model_path = 'emotiondetector2.h5'
     if os.path.exists(model_path):
         return tf.keras.models.load_model(model_path)
     return None
